@@ -7,17 +7,12 @@
     body {
       font-family: Arial, sans-serif;
       margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
+      padding: 20px;
       background-color: #f0f0f0;
     }
     table {
       width: 100%;
-      max-width: 600px;
+      max-width: 1000px;
       border-collapse: collapse;
       margin: 20px 0;
       background-color: #fff;
@@ -31,54 +26,72 @@
     th {
       background-color: #f4f4f4;
     }
-    @media (max-width: 600px) {
-      table, th, td {
-        display: block;
-        width: 100%;
-      }
-      th, td {
-        text-align: right;
-        padding-left: 50%;
-        position: relative;
-      }
-      th::before, td::before {
-        content: attr(data-label);
-        position: absolute;
-        left: 0;
-        width: 50%;
-        padding-left: 10px;
-        font-weight: bold;
-        text-align: left;
-      }
+    select {
+      margin: 20px 0;
+      padding: 10px;
+      font-size: 16px;
     }
   </style>
   <script>
     async function fetchData() {
       try {
-        const response = await fetch('https://script.google.com/macros/s/AKfycbzjIT4wf0YtyR2l1SodP1J6Z2Uar5XaeE47xFmnqpIDtan5wIZ7jhN834vKnacpYSkf/exec');
+        const response = await fetch('https://script.google.com/macros/s/AKfycbyq_f2utltb_ZjNBioS9ObHhjFqPLVSoyixiqKMahinqCkiav6fS1FC_5rISLScQ2yY/exec');
         if (!response.ok) {
           throw new Error('Network response was not ok');
         }
         const data = await response.json();
-        updateSite(data);
+        populateSheetSelection(data);
       } catch (error) {
         console.error('There was a problem with the fetch operation:', error);
       }
     }
 
-    function updateSite(data) {
+    function populateSheetSelection(data) {
+      const sheetSelect = document.getElementById('sheet-select');
+      for (const sheetName in data) {
+        const option = document.createElement('option');
+        option.value = sheetName;
+        option.textContent = sheetName;
+        sheetSelect.appendChild(option);
+      }
+      sheetSelect.addEventListener('change', (event) => {
+        updateTable(data[event.target.value]);
+      });
+      // Initialize with the first sheet
+      if (sheetSelect.options.length > 0) {
+        sheetSelect.value = sheetSelect.options[0].value;
+        updateTable(data[sheetSelect.value]);
+      }
+    }
+
+    function updateTable(sheetData) {
       const table = document.getElementById('data-table-body');
-      table.innerHTML = '';  // Golește tabelul înainte de a adăuga date noi
-      data.forEach(row => {
+      table.innerHTML = ''; // Golește tabelul înainte de a adăuga date noi
+
+      if (sheetData.length === 0) return;
+
+      const headers = Object.keys(sheetData[0]);
+      const thead = document.createElement('thead');
+      const headerRow = document.createElement('tr');
+      headers.forEach(header => {
+        const th = document.createElement('th');
+        th.textContent = header;
+        headerRow.appendChild(th);
+      });
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+      sheetData.forEach(row => {
         const tr = document.createElement('tr');
-        Object.keys(row).forEach(key => {
+        headers.forEach(header => {
           const td = document.createElement('td');
-          td.textContent = row[key];
-          td.setAttribute('data-label', key);
+          td.textContent = row[header];
           tr.appendChild(td);
         });
-        table.appendChild(tr);
+        tbody.appendChild(tr);
       });
+      table.appendChild(tbody);
     }
 
     window.onload = fetchData;
@@ -86,14 +99,11 @@
 </head>
 <body>
   <h1>Website actualizat din Google Sheets</h1>
+  <select id="sheet-select"></select>
   <table>
     <thead>
       <tr>
-        <th data-label="Serviciu">Serviciu</th>
-        <th data-label="Tip">Tip</th>
-        <th data-label="Companie">Companie</th>
-        <th data-label="Cost (lei)">Cost (lei)</th>
-        <th data-label="Bifat">Bifat</th>
+        <!-- Header dinamic -->
       </tr>
     </thead>
     <tbody id="data-table-body">
